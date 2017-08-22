@@ -1,0 +1,1012 @@
+---
+title: "ggplot"
+subtitle: "An R Package for Data Visualization"
+author: "Dave Childers | Procurement | dachilde@cisco.com"
+date: "August 17, 2017"
+output: ioslides_presentation
+---
+
+<!--
+incremental: no
+smaller: true
+-->
+
+<!--
+
+## Intro
+
+Dave Childers
+
+- Data Scientist with Prourement
+- Before that: Lead Data Scientist at Powerley
+- Before that: Statistical Consulting at University of Michigan
+
+-->
+
+## Overview
+
+### Goal
+
+- Leave confident you can use ggplot
+
+### Agenda
+
+1. Intro and Motivation
+2. Grammar
+3. Toolkit
+4. Facets, Scales, Themes
+5. Full Example
+
+<!--
+
+# Intro and Motivation
+
+-->
+
+```{r setup, echo=FALSE, warning=FALSE, message=FALSE}
+#library(shiny)
+library(knitr)
+library(ggplot2)
+library(dplyr)
+library(scales)
+library(DiagrammeR)
+library(ggvis)
+```
+
+<!--
+
+## Data Science Process
+
+![From *R for Data Science*](data-science-project.png)
+
+-->
+
+## ggplot and R
+
+- *R* is a language for statistical computing and data science
+
+- *ggplot2* is an R package for data visualization
+
+<!---
+
+## Who Uses ggplot
+
+- NYTimes
+- FiveThirtyEight
+- ProPublica
+- Airbnb
+- Google
+
+-->
+
+<!--
+
+## Stackoverflow Tags
+
+```{r, echo=FALSE}
+so_tags <- tibble::tribble(
+  ~tag, ~value,
+  "R", 197484,
+  "ggplot2", 18035
+)
+```
+
+```{r, echo=FALSE}
+ggplot(so_tags, aes(x = reorder(tag, -value), y = value)) +
+  geom_col() +
+  geom_text(aes(label = comma(value)), vjust = -0.5) +
+  scale_y_continuous("Number of Tags", label = comma) +
+  labs(
+    x = NULL, 
+    title = "Number of SO Tags",
+    subtitle = "2017-08-17"
+    )
+```
+
+-->
+
+## Motivation 
+
+```{r, echo=FALSE, warning=FALSE}
+pres2 <- presidential %>% filter(start >= as.Date("1969-01-20"))
+ggplot(economics) +
+  geom_ribbon(aes(x = date, ymin = psavert - 1, ymax = psavert + 1)) +
+  geom_line(aes(x = date, y = psavert), color = "orange") +
+  geom_rect(
+    aes(xmin = start, xmax = end, fill = party),
+    ymin = -Inf, ymax = Inf, alpha = 0.2,
+    data = pres2
+  ) +
+  scale_fill_manual(values = c("blue", "red")) +
+  scale_x_date(limits = as.Date(c("1968-01-01", "2017-01-20")), date_breaks = "4 years", date_labels = "%Y") +
+  geom_vline(
+    aes(xintercept = as.numeric(start)),
+    data = pres2,
+    color = "grey50",
+    alpha = 0.5
+    ) +
+  geom_text(
+    aes(x = start, y = 18, label = name),
+    data = pres2,
+    size = 3, vjust = 0, hjust = 0, nudge_x = 50
+    ) +
+  labs(
+    x = NULL,
+    y = "Rate",
+    title = "Personal Savings Rate",
+    subtitle = "1967-2015",
+    caption = "Data from http://research.stlouisfed.org/fred2"
+  ) +
+  theme_bw()
+```
+
+# Grammar
+
+## Fuel Economy Data
+
+```{r, eval=FALSE}
+mpg 
+```
+
+```{r, echo=FALSE}
+mpg %>% filter(manufacturer %in% c("audi", "dodge")) %>%
+  group_by(manufacturer) %>% slice(1:2) %>% 
+  select(manufacturer, model, displ, hwy, cyl, class) %>%
+  kable(.)
+```
+
+<!--
+
+## City MPG v Highway MPG
+
+```{r, eval=FALSE}
+mpg %>% select(displ, hwy)
+```
+
+
+
+```{r, echo=FALSE}
+mpg %>% select(displ, hwy) %>% head() %>% kable(.)
+```
+
+-->
+
+## Scatterplot Code
+
+```{r, eval=FALSE}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point()
+```
+
+## Scatterplot Code
+
+```{r, eval=FALSE}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point()
+```
+
+1. Plot function: `ggplot()`
+2. The data: `mpg`
+3. Aesthetic mapping: `aes(...)`
+4. A layer: `geom_point()`
+
+## Scatterplot Code
+
+```{r}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point()
+```
+
+## Map class to color 
+
+```{r}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point(aes(color = class))
+```
+
+## Setting the value of color
+
+```{r}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point(color = "darkgreen")
+```
+
+<!--
+
+## Mapping Versus Setting 
+
+### Mapping
+
+```{r, eval = FALSE}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point(aes(color = class))
+```
+
+-->
+
+## Mapping Versus Setting 
+
+### Mapping
+
+```{r, eval = FALSE}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point(aes(color = class))
+```
+
+### Setting
+
+```{r, eval=FALSE}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point(color = "darkgreen")
+```
+
+<!--
+
+## Reference Line 
+
+```{r, eval=FALSE}
+... + geom_abline(linetype = "dashed", intercept = 0, slope = 1) 
+```
+
+```{r, echo=FALSE}
+ggplot(mpg, aes(x = cty, y = hwy)) +
+  geom_point(aes(color = class)) +
+  geom_abline(linetype = "dashed", intercept = 0, slope = 1) 
+```
+
+-->
+
+## Linear model fit
+
+```{r, eval=FALSE}
+... + geom_smooth(method = "lm")
+```
+
+```{r, echo=FALSE}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point(aes(color = class)) +
+  geom_smooth(method = "lm")
+```
+
+<!--
+
+## Loess Fit
+
+```{r}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point(aes(color = class)) +
+  geom_smooth(method = "loess")
+```
+
+-->
+
+## Mapping Color
+
+### Method1
+
+```{r, eval=FALSE}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point(aes(color = class)) +
+  geom_smooth(method = "lm", se = FALSE)
+```
+
+### Method2
+
+```{r, eval=FALSE}
+ggplot(mpg, aes(x = displ, y = hwy, color = class)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+```
+
+## One smooth per class
+
+```{r}
+ggplot(mpg, aes(x = displ, y = hwy, color = class)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE)
+```
+
+## One smooth
+
+```{r}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point(aes(color = class)) +
+  geom_smooth(method = "lm", se = FALSE)
+```
+
+## A layer consists of
+
+1. Data (`mpg`)
+2. Aesthetic Mapping (`aes()`)
+3. Geometric Object (`geom_`)
+4. Statistical Transformation (`stat = "count"`)
+
+## Statistical Transformation
+
+```{r}
+ggplot(mpg, aes(x = class)) + 
+  geom_bar(stat = "count")
+```
+
+## Grammar Summary
+
+1. Plots based on data.frame
+
+2. Map data columns to aesthetic properties
+
+3. Build plots iteratively
+
+# Geom Toolkit
+
+## Boxplot
+
+```{r}
+ggplot(mpg, aes(x = class, y = hwy)) + 
+  geom_boxplot()
+```
+
+## Adding Points
+
+```{r}
+ggplot(mpg, aes(x = class, y = hwy)) + 
+  geom_boxplot() + 
+  geom_point()
+```
+
+## Position Adjustments
+
+```{r}
+ggplot(mpg, aes(x = class, y = hwy)) + 
+  geom_boxplot() + 
+  geom_jitter()
+```
+
+<!--
+
+
+## Violin Plots
+```{r}
+ggplot(mpg, aes(x = class, y = cty)) + 
+  geom_violin()
+```
+
+## Density Plots
+
+```{r}
+ggplot(mpg, aes(x = hwy)) +
+  geom_density()
+```
+
+-->
+
+## Histograms
+
+```{r, warning=FALSE, message=FALSE}
+ggplot(mpg, aes(x = hwy)) +
+  geom_histogram()
+```
+
+
+<!--
+
+Huron
+
+```{r}
+huron <- data.frame(year = 1875:1972, level = as.vector(LakeHuron)) %>% tbl_df
+kable(huron)
+```
+
+```{r}
+ggplot(huron, aes(year)) +
+  geom_area(aes(y = level))
+```
+
+```{r}
+ggplot(huron, aes(year)) + geom_ribbon(aes(ymin=550, ymax=level))
+```
+
+-->
+
+## Line Plot
+
+```{r}
+ggplot(economics, aes(x = date, y = psavert)) +
+  geom_line()
+```
+
+## Area Plot
+
+```{r, eval=FALSE}
+... + geom_area()
+```
+
+```{r, echo=FALSE}
+ggplot(economics, aes(x = date, y = psavert)) +
+  geom_area()
+```
+
+## Ribbon
+
+```{r, eval=FALSE}
+... +
+  geom_ribbon(aes(ymin = psavert - 0.5, ymax = psavert + 0.5))
+```
+
+```{r, echo=FALSE}
+ggplot(economics, aes(x = date, y = psavert)) +
+  geom_ribbon(aes(ymin = psavert - 0.5, ymax = psavert + 0.5))
+```
+
+<!--
+
+## Diamonds Data | n = 54,000
+
+```{r}
+diamonds %>% select(carat, price) %>% head() %>% kable()
+```
+
+## 2d binning
+
+```{r}
+ggplot(diamonds, aes(x = carat, price)) +
+  geom_bin2d(color = "white")
+```
+
+-->
+
+## Heat Map: Old Faithful Eruptions
+
+```{r, eval=FALSE}
+... + geom_raster(aes(fill = density))
+```
+
+
+```{r, echo=FALSE}
+ggplot(faithfuld, aes(waiting, eruptions)) +
+  geom_raster(aes(fill = density))
+```
+
+## Contour Plots
+
+```{r, eval=FALSE}
+... + geom_contour(aes(z = density))
+```
+
+```{r, echo=FALSE}
+ggplot(faithfuld, aes(waiting, eruptions)) +
+  geom_contour(aes(z = density))
+```
+
+## Help on Layers
+
+```{r}
+help(geom_boxplot)
+```
+
+geom_boxplot understands the following aesthetics (required aesthetics are in bold):
+
+- **x**
+- **ymin**
+- **ymax**
+- alpha
+- colour
+
+# Faceting
+
+## Mpg v Displacement
+
+```{r}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point()
+```
+
+## Facet by Cylinder
+
+```{r, eval=FALSE}
+... + facet_wrap(~ cyl)
+```
+
+```{r, echo = FALSE}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point() +
+  facet_wrap(~ cyl) 
+```
+
+## Free Scales
+
+```{r, eval=FALSE}
+... + facet_wrap(~ cyl, scales = "free")
+```
+
+```{r, echo = FALSE}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point() +
+  facet_wrap(~ cyl, scales = "free") 
+```
+
+## One Smooth Per Facet
+
+```{r, eval=FALSE}
+... + facet_wrap(~ cyl, scales = "free") +
+  geom_smooth(method = "lm")
+```
+
+```{r, echo=FALSE}
+ggplot(mpg, aes(x = displ, y = hwy)) +
+  geom_point() +
+  facet_wrap(~ cyl, scales = "free") +
+  geom_smooth(method = "lm")
+```
+
+# Scales
+
+## Scales
+
+A **scale** controls how the data appears on the plot
+
+## Displacement, Highway, Cylinders
+
+```{r}
+ggplot(mpg, aes(x = displ, y = hwy, color = factor(cyl))) +
+  geom_point()
+```
+
+## Name
+
+```{r, eval=FALSE}
+... + scale_x_continuous("Engine Displacement")
+```
+
+```{r, echo=FALSE}
+ggplot(mpg, aes(x = displ, y = hwy, color = factor(cyl))) +
+  geom_point() +
+  #scale_y_continuous("Highway MPG", limits = c(0, 50)) +
+  scale_x_continuous("Engine Displacement")
+```
+
+## Limits, Breaks
+
+```{r, eval=FALSE}
+... + scale_y_continuous("Highway MPG", limits = c(0, 50), 
+                         breaks = seq(0, 50, by = 5))
+```
+
+```{r, echo=FALSE}
+ggplot(mpg, aes(x = displ, y = hwy, color = factor(cyl))) +
+  geom_point() +
+  scale_y_continuous("Highway MPG", limits = c(0, 50), breaks = seq(0, 50, by = 5)) +
+  scale_x_continuous("Engine Displacement")
+```
+
+
+
+## Color Scale 
+
+```{r, eval=FALSE}
+... + scale_color_hue("Cylinders", l = 80, c = 60)
+```
+
+```{r, echo=FALSE}
+ggplot(mpg, aes(x = displ, y = hwy, color = factor(cyl))) +
+  geom_point() +
+  scale_y_continuous("Highway MPG", limits = c(0, 50), breaks = seq(0, 50, by = 5)) +
+  scale_x_continuous("Engine Displacement") +
+  scale_color_hue("Cylinders", l = 80, c = 60)
+```
+
+
+
+## Scale Toolbox 
+
+```{r, echo=FALSE}
+read.csv("sample-scales.csv") %>% kable(.)
+```
+
+# Themes
+
+## Themes
+
+A theme controls finer elements of plot appearance
+
+## x-axis labels
+
+```{r, eval=FALSE}
+... + theme(axis.text.x = element_text(size = 16 ))
+```
+
+```{r, echo=FALSE}
+ggplot(mpg, aes(x = displ, y = hwy, color = factor(cyl))) +
+  geom_point() +
+  scale_x_continuous(breaks = 1:10) +
+  scale_y_continuous("Highway MPG", limits = c(0, 50)) +
+  scale_color_hue("Cylinders", l = 80, c = 60) +
+  theme(axis.text.x = element_text(size = 16))
+```
+
+## y-title rotation
+
+```{r, eval=FALSE}
+... + theme(axis.title.y = element_text(angle = 0)
+```
+
+
+```{r, echo=FALSE}
+ggplot(mpg, aes(x = displ, y = hwy, color = factor(cyl))) +
+  geom_point() +
+  scale_x_continuous(breaks = 1:10) +
+  scale_y_continuous("Highway MPG", limits = c(0, 50)) +
+  scale_color_hue("Cylinders", l = 80, c = 60) +
+  theme(axis.text.x = element_text(size = 12),
+        axis.title.y = element_text(angle = 0))
+```
+
+## Sample Theme Elements
+
+```{r, echo=FALSE}
+suppressWarnings(read.csv("sample-theme-elements.csv")) %>% kable(.)
+```
+
+## Complete Themes
+
+```{r, eval=FALSE}
+... + theme_bw()
+```
+
+```{r, echo=FALSE}
+ggplot(mpg, aes(x = displ, y = hwy, color = factor(cyl))) +
+  geom_point() +
+  scale_x_continuous(breaks = 1:10) +
+  scale_y_continuous("Highway MPG", limits = c(0, 50)) +
+  scale_color_hue("Cylinders", l = 80, c = 60) +
+  theme(axis.text.x = element_text(size = 12),
+        axis.title.y = element_text(angle = 0)) +
+  theme_bw()
+```
+
+<!--
+
+# Coordinate Systems
+
+## Map
+
+## List
+
+## List of coord_systems
+
+-->
+
+# Bring it together
+
+## Motivating Plot
+
+```{r, echo=FALSE, warning=FALSE}
+ggplot(economics) +
+  geom_ribbon(aes(x = date, ymin = psavert - 1, ymax = psavert + 1)) +
+  geom_line(aes(x = date, y = psavert), color = "orange") +
+  geom_rect(
+    aes(xmin = start, xmax = end, fill = party),
+    ymin = -Inf, ymax = Inf, alpha = 0.2,
+    data = pres2
+  ) +
+  scale_fill_manual(values = c("blue", "red")) +
+  scale_x_date(limits = as.Date(c("1968-01-01", "2017-01-20")), date_breaks = "4 years", date_labels = "%Y") +
+  geom_vline(
+    aes(xintercept = as.numeric(start)),
+    data = pres2,
+    color = "grey50",
+    alpha = 0.5
+    ) +
+  geom_text(
+    aes(x = start, y = 18, label = name),
+    data = pres2,
+    size = 3, vjust = 0, hjust = 0, nudge_x = 50
+    ) +
+  labs(
+    x = NULL,
+    y = "Rate",
+    title = "Personal Savings Rate",
+    subtitle = "1967-2015",
+    caption = "Data from http://research.stlouisfed.org/fred2"
+  ) + theme_bw()
+```
+
+
+## Personal Savings Rate
+
+```{r, eval=FALSE}
+economics
+```
+
+```{r, echo=FALSE}
+economics %>% select(date, psavert) %>% head %>% kable()
+```
+
+## Line Plot
+
+```{r, echo=TRUE}
+ggplot(economics) +
+  geom_line(aes(x = date, y = psavert), color = "orange")
+```
+
+## Uncertainty
+
+```{r, eval=FALSE}
+... + geom_ribbon(aes(x = date, ymin = psavert - 1, ymax = psavert + 1))
+```
+
+```{r, echo=FALSE}
+ggplot(economics) +
+  geom_ribbon(aes(x = date, ymin = psavert - 1, ymax = psavert + 1)) +
+  geom_line(aes(x = date, y = psavert), color = "orange")
+```
+
+## Presidential Data
+
+```{r, eval=FALSE}
+pres2
+```
+
+
+```{r, echo=FALSE}
+pres2 %>% filter(start >= as.Date("1980-01-01")) %>% kable()
+```
+
+
+## US Presidents
+
+```{r, eval=FALSE}
+... + geom_rect(aes(fill = party), data = pres2)
+```
+
+```{r, echo=FALSE}
+ggplot(economics) +
+  geom_ribbon(aes(x = date, ymin = psavert - 1, ymax = psavert + 1)) +
+  geom_line(aes(x = date, y = psavert), color = "orange") +
+  geom_rect(
+    aes(xmin = start, xmax = end, fill = party),
+    ymin = -Inf, ymax = Inf, alpha = 0.2,
+    data = pres2
+  )
+```
+
+
+## Color Scale
+
+```{r, eval=FALSE}
+... + scale_fill_manual(values = c("blue", "red"))
+```
+
+```{r, echo=FALSE}
+ggplot(economics) +
+  geom_ribbon(aes(x = date, ymin = psavert - 1, ymax = psavert + 1)) +
+  geom_line(aes(x = date, y = psavert), color = "orange") +
+  geom_rect(
+    aes(xmin = start, xmax = end, fill = party),
+    ymin = -Inf, ymax = Inf, alpha = 0.2,
+    data = pres2
+  ) +
+  scale_fill_manual(values = c("blue", "red"))
+```
+
+
+## Date Scale
+
+```{r, eval=FALSE}
+... + scale_x_date(date_breaks = "4 years", date_labels = "%Y")
+```
+
+```{r, echo=FALSE, warning=FALSE}
+ggplot(economics) +
+  geom_ribbon(aes(x = date, ymin = psavert - 1, ymax = psavert + 1)) +
+  geom_line(aes(x = date, y = psavert), color = "orange") +
+  geom_rect(
+    aes(xmin = start, xmax = end, fill = party),
+    ymin = -Inf, ymax = Inf, alpha = 0.2,
+    data = pres2
+  ) +
+  scale_fill_manual(values = c("blue", "red")) +
+  scale_x_date(limits = as.Date(c("1968-01-01", "2017-01-20")), date_breaks = "4 years", date_labels = "%Y")
+```
+
+
+## Separating Lines
+
+```{r, eval=FALSE}
+... + geom_vline(aes(xintercept = start), data = pres2) 
+```
+
+```{r, echo=FALSE, warning=FALSE}
+ggplot(economics) +
+  geom_ribbon(aes(x = date, ymin = psavert - 1, ymax = psavert + 1)) +
+  geom_line(aes(x = date, y = psavert), color = "orange") +
+  geom_rect(
+    aes(xmin = start, xmax = end, fill = party),
+    ymin = -Inf, ymax = Inf, alpha = 0.2,
+    data = pres2
+  ) +
+  scale_fill_manual(values = c("blue", "red")) +
+  scale_x_date(limits = as.Date(c("1968-01-01", "2017-01-20")), date_breaks = "4 years", date_labels = "%Y") +
+  geom_vline(
+    aes(xintercept = as.numeric(start)),
+    data = pres2,
+    color = "grey50",
+    alpha = 0.5
+    ) 
+```
+
+## Text
+
+```{r, eval=FALSE}
+... + geom_text(aes(x = start, label = name), data = pres2) 
+```
+
+
+```{r, echo=FALSE, warning=FALSE}
+ggplot(economics) +
+  geom_ribbon(aes(x = date, ymin = psavert - 1, ymax = psavert + 1)) +
+  geom_line(aes(x = date, y = psavert), color = "orange") +
+  geom_rect(
+    aes(xmin = start, xmax = end, fill = party),
+    ymin = -Inf, ymax = Inf, alpha = 0.2,
+    data = pres2
+  ) +
+  scale_fill_manual(values = c("blue", "red")) +
+  scale_x_date(limits = as.Date(c("1968-01-01", "2017-01-20")), date_breaks = "4 years", date_labels = "%Y") +
+  geom_vline(
+    aes(xintercept = as.numeric(start)),
+    data = pres2,
+    color = "grey50",
+    alpha = 0.5
+    ) +
+  geom_text(
+    aes(x = start, y = 18, label = name),
+    data = pres2,
+    size = 3, vjust = 0, hjust = 0, nudge_x = 50
+    ) 
+```
+
+## Labels
+
+```{r, eval=FALSE}
+... + labs(x = NULL, y = "Rate", title = "Personal Savings Rate") 
+```
+
+```{r, echo=FALSE, warning=FALSE}
+ggplot(economics) +
+  geom_ribbon(aes(x = date, ymin = psavert - 1, ymax = psavert + 1)) +
+  geom_line(aes(x = date, y = psavert), color = "orange") +
+  geom_rect(
+    aes(xmin = start, xmax = end, fill = party),
+    ymin = -Inf, ymax = Inf, alpha = 0.2,
+    data = pres2
+  ) +
+  scale_fill_manual(values = c("blue", "red")) +
+  scale_x_date(limits = as.Date(c("1968-01-01", "2017-01-20")), date_breaks = "4 years", date_labels = "%Y") +
+  geom_vline(
+    aes(xintercept = as.numeric(start)),
+    data = pres2,
+    color = "grey50",
+    alpha = 0.5
+    ) +
+  geom_text(
+    aes(x = start, y = 18, label = name),
+    data = pres2,
+    size = 3, vjust = 0, hjust = 0, nudge_x = 50
+    ) +
+  labs(
+    x = NULL,
+    y = "Rate",
+    title = "Personal Savings Rate",
+    subtitle = "1967-2015",
+    caption = "Data from http://research.stlouisfed.org/fred2"
+  )
+```
+
+## Theme
+
+```{r, eval=FALSE}
+... +
+  theme_bw()
+```
+
+```{r, echo=FALSE, warning=FALSE}
+ggplot(economics) +
+  geom_ribbon(aes(x = date, ymin = psavert - 1, ymax = psavert + 1)) +
+  geom_line(aes(x = date, y = psavert), color = "orange") +
+  geom_rect(
+    aes(xmin = start, xmax = end, fill = party),
+    ymin = -Inf, ymax = Inf, alpha = 0.2,
+    data = pres2
+  ) +
+  scale_fill_manual(values = c("blue", "red")) +
+  scale_x_date(limits = as.Date(c("1968-01-01", "2017-01-20")), date_breaks = "4 years", date_labels = "%Y") +
+  geom_vline(
+    aes(xintercept = as.numeric(start)),
+    data = pres2,
+    color = "grey50",
+    alpha = 0.5
+    ) +
+  geom_text(
+    aes(x = start, y = 18, label = name),
+    data = pres2,
+    size = 3, vjust = 0, hjust = 0, nudge_x = 50
+    ) +
+  labs(
+    x = NULL,
+    y = "Rate",
+    title = "Personal Savings Rate",
+    subtitle = "1967-2015",
+    caption = "Data from http://research.stlouisfed.org/fred2"
+  ) + theme_bw()
+```
+
+## The Layers
+
+```{r, eval=FALSE}
+ggplot(economics, data = economics) +
+  geom_ribbon() +
+  geom_line() +
+  geom_rect(data = pres2) +
+  scale_fill_manual() +
+  scale_x_date() +
+  geom_vline() +
+  geom_text() +
+  labs() +
+  theme_bw()
+```
+
+<!--
+
+## Stackoverflow Tags
+
+```{r, echo=FALSE}
+so_tags <- tibble::tribble(
+  ~tag, ~value,
+  "R", 197484,
+  "ggplot2", 18035
+)
+```
+
+```{r, echo=FALSE}
+ggplot(so_tags, aes(x = reorder(tag, -value), y = value)) +
+  geom_col() +
+  geom_text(aes(label = comma(value)), vjust = -0.5) +
+  scale_y_continuous("Number of Tags", label = comma) +
+  labs(
+    x = NULL, 
+    title = "Number of SO Tags",
+    subtitle = "2017-08-17"
+    )
+```
+
+-->
+
+## ggplot2
+
+- package for data visualization
+
+- grammar of graphics
+
+- based on data
+
+- build layer by layer
+
+- rapid experimentation
+
+- fine tune control
+
+## Learning More
+
+### Books
+
+[R for Data Science](http://r4ds.had.co.nz/)  
+[R Graphics CookBook](http://shop.oreilly.com/product/0636920023135.do)  
+[ggplot book](http://ggplot2.tidyverse.org/)
+
+### Web
+[ggplot](http://ggplot2.tidyverse.org/)  
+[tidyverse](https://www.tidyverse.org/)
+
+### Contact Me
+Dave Childers  
+dachilde@cisco.com

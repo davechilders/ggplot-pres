@@ -1,0 +1,3 @@
+Plot,Axis,Legend,Panel,Faceting
+plot.title,axis.line,legend.key,panel.border,strip.text
+plot.margin,axis.text,legend.text,aspect.ratio,panel.margin
